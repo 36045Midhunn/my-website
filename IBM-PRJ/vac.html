@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online Blood Donation Management System</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: "Poppins", Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: linear-gradient(90deg, #c82333, #a71d2a);
+      color: #fff;
+      text-align: center;
+      padding: 20px 10px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    header p {
+      margin: 5px 0 0;
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1000px;
+      background: #fff;
+      margin: 20px auto;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      color: #c82333;
+      border-left: 6px solid #c82333;
+      padding-left: 10px;
+    }
+
+    #map {
+      height: 400px;
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+
+    button {
+      background-color: #c82333;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #a71d2a;
+      transform: scale(1.02);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+
+    th {
+      background-color: #c82333;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f8d7da;
+    }
+
+    footer {
+      background-color: #c82333;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      margin-top: 20px;
+    }
+
+    .success-msg {
+      color: green;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Online Blood Donation Management System</h1>
+  <p>Find Nearby Blood Banks & Register as a Donor</p>
+</header>
+
+<div class="container">
+  <h2>Nearby Blood Banks</h2>
+  <button onclick="findLocation()">Use My Location</button>
+  <div id="map"></div>
+</div>
+
+<div class="container">
+  <h2>Donor Registration</h2>
+  <form id="donorForm" onsubmit="return false;">
+    <input type="text" id="name" placeholder="Full Name" required />
+    <select id="bloodGroup" required>
+      <option value="">Select Blood Group</option>
+      <option>A+</option><option>A-</option>
+      <option>B+</option><option>B-</option>
+      <option>O+</option><option>O-</option>
+      <option>AB+</option><option>AB-</option>
+    </select>
+    <input type="text" id="city" placeholder="City" required />
+    <input type="text" id="phone" placeholder="Mobile Number" required />
+    <button type="button" onclick="registerDonor()">Register</button>
+  </form>
+  <p id="msg" class="success-msg"></p>
+
+  <h3>Registered Donors</h3>
+  <table id="donorTable">
+    <tr>
+      <th>Name</th>
+      <th>Blood Group</th>
+      <th>City</th>
+      <th>Phone</th>
+    </tr>
+  </table>
+</div>
+
+<footer>
+  <p>© 2025 Blood Donation Platform | Designed by Mithun</p>
+</footer>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  // Initialize the map
+  let map = L.map("map").setView([12.9141, 74.8560], 10);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18,
+  }).addTo(map);
+
+  // Blood banks
+  const bloodBanks = [
+    { name: "Red Cross Blood Bank", lat: 12.9141, lon: 74.8560 },
+    { name: "City Hospital Blood Bank", lat: 13.3409, lon: 74.7421 },
+    { name: "Life Care Blood Bank", lat: 12.5, lon: 75.0 },
+  ];
+
+  // Add bank markers
+  bloodBanks.forEach((b) => {
+    L.marker([b.lat, b.lon])
+      .addTo(map)
+      .bindPopup(`<b>${b.name}</b>`);
+  });
+
+  // Find user location
+  function findLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        map.setView([lat, lon], 13);
+        L.marker([lat, lon])
+          .addTo(map)
+          .bindPopup("You are here!");
+      });
+    } else {
+      alert("Geolocation not supported!");
+    }
+  }
+
+  // Donor registration logic
+  const donors = [];
+
+  async function registerDonor() {
+    const name = document.getElementById("name").value.trim();
+    const blood = document.getElementById("bloodGroup").value;
+    const city = document.getElementById("city").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const msg = document.getElementById("msg");
+
+    if (!name || !blood || !city || !phone) {
+      alert("Please fill in all fields!");
+      return;
+    }
+
+    // Geocode the donor's city using OpenStreetMap
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`
+      );
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+
+        // Add donor to array
+        donors.push({ name, blood, city, phone, lat, lon });
+
+        // Add marker on map
+        L.marker([lat, lon])
+          .addTo(map)
+          .bindPopup(`<b>${name}</b><br>Blood Group: ${blood}<br>City: ${city}`);
+
+        // Update donor list
+        displayDonors();
+
+        // Success message
+        document.getElementById("donorForm").reset();
+        msg.textContent = "Donor registered successfully and marked on map!";
+        setTimeout(() => (msg.textContent = ""), 2500);
+      } else {
+        alert("City not found! Please enter a valid location.");
+      }
+    } catch (error) {
+      alert("Error fetching location data.");
+    }
+  }
+
+  // Display donors in table
+  function displayDonors() {
+    const table = document.getElementById("donorTable");
+    table.innerHTML = `
+      <tr>
+        <th>Name</th>
+        <th>Blood Group</th>
+        <th>City</th>
+        <th>Phone</th>
+      </tr>
+    `;
+    donors.forEach((d) => {
+      const row = table.insertRow();
+      row.insertCell(0).innerText = d.name;
+      row.insertCell(1).innerText = d.blood;
+      row.insertCell(2).innerText = d.city;
+      row.insertCell(3).innerText = d.phone;
+    });
+  }
+</script>
+</body>
+</html>
